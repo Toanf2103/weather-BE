@@ -1,4 +1,4 @@
-import { HttpException, Injectable, InternalServerErrorException } from '@nestjs/common'
+import { HttpException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
 
 import { apiWeather } from '@/common/configs'
 import { FindCitiesRequest, GetCurrentWeatherRequest, GetForeCastWeatherRequest } from './request'
@@ -7,6 +7,7 @@ import { plainToInstance } from 'class-transformer'
 import { addDays, format } from 'date-fns'
 import { Cron } from '@nestjs/schedule'
 import { EmailService } from '../email/email.service'
+import { GetCurrentIpWeatherRequest } from './request/get-current-ip-weather.request'
 
 @Injectable()
 export class WeatherService {
@@ -43,6 +44,45 @@ export class WeatherService {
       return plainToInstance(CurrentWeatherResponse, currentWeather, {
         excludeExtraneousValues: true,
       })
+    } catch (err) {
+      if (err.response.data) {
+        throw new HttpException(err?.response?.data?.error, err.response.status)
+      } else {
+        console.error(err)
+        throw new InternalServerErrorException()
+      }
+    }
+  }
+
+  public async getCurrentIpWeather(
+    getCurrentWeatherRequest: GetCurrentIpWeatherRequest,
+  ): Promise<CurrentWeatherResponse> {
+    const ip = getCurrentWeatherRequest.ip
+    console.log(ip)
+
+    try {
+      const { data: currentIp } = await apiWeather.get<any>('/ip.json', {
+        params: {
+          key: process.env.WEATHER_API_KEY,
+          q: ip,
+        },
+      })
+
+      if(!currentIp.city){
+        throw new NotFoundException()
+      }
+
+      const { data: currentWeather } = await apiWeather.get<any>('/current.json', {
+        params: {
+          key: process.env.WEATHER_API_KEY,
+          q:currentIp.city,
+        },
+      })
+
+      return plainToInstance(CurrentWeatherResponse, currentWeather, {
+        excludeExtraneousValues: true,
+      })
+
     } catch (err) {
       if (err.response.data) {
         throw new HttpException(err?.response?.data?.error, err.response.status)
@@ -124,7 +164,7 @@ export class WeatherService {
     return additionalForecast[0]
   }
 
-  @Cron('0 */1 * * * *')
+  // @Cron('0 */1 * * * *')
   public async lockTimeSheet(): Promise<void> {
     await this.emailService.sendMail()
   }
