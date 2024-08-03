@@ -1,13 +1,33 @@
-import { Controller, Get, HttpCode, HttpStatus, Ip, Query, Req } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Ip,
+  Post,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common'
 import { WeatherService } from './weather.service'
-import { FindCitiesRequest, GetCurrentWeatherRequest, GetForeCastWeatherRequest } from './request'
+import {
+  FindCitiesRequest,
+  GetCurrentWeatherRequest,
+  GetForeCastWeatherRequest,
+  RegisterNotificationsRequest,
+} from './request'
 import { CityResponse, CurrentWeatherResponse } from './response'
-import { Request } from 'express'
+import { Request, Response } from 'express'
 import { GetCurrentIpWeatherRequest } from './request/get-current-ip-weather.request'
+import { ConfigService } from '@nestjs/config'
 
 @Controller('weather')
 export class WeatherController {
-  constructor(private readonly weatherService: WeatherService) {}
+  constructor(
+    private readonly weatherService: WeatherService,
+    private readonly configSer: ConfigService,
+  ) {}
 
   @Get('/find-cities')
   @HttpCode(HttpStatus.OK)
@@ -37,5 +57,29 @@ export class WeatherController {
     @Query() getForeCastWeatherRequest: GetForeCastWeatherRequest,
   ): Promise<CurrentWeatherResponse> {
     return await this.weatherService.getForecastWeather(getForeCastWeatherRequest)
+  }
+
+  @Post('/register-notifications')
+  @HttpCode(HttpStatus.OK)
+  async registerNotifications(@Body() rq: RegisterNotificationsRequest) {
+    return await this.weatherService.registerNotifications(rq)
+  }
+
+  @Get('/verify')
+  @HttpCode(HttpStatus.OK)
+  async verify(@Query('token') token: string, @Res() res: Response) {
+    try {
+      const a = await this.weatherService.verify(token)
+      console.log('a', a)
+      res.redirect(`${this.configSer.get('FRONTEND_URL')}?success=true`)
+    } catch {
+      res.redirect(this.configSer.get('FRONTEND_URL'))
+    }
+  }
+
+  @Get('/send-mail-daily')
+  @HttpCode(HttpStatus.OK)
+  async sendMailDaily() {
+    return this.weatherService.sendMailDaily()
   }
 }

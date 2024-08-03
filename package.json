@@ -2,7 +2,7 @@
   "name": "weather-forecast",
   "version": "0.0.1",
   "description": "",
-  "author": "",
+  "author": "Toanf",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -19,12 +19,12 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "typeorm": "ts-node -r tsconfig-paths/register node_modules/typeorm/cli.js -d src/database/configs/typeorm.config.ts",
-    "migration:generate": "yarn typeorm migration:generate src/database/migrations/migration",
-    "migration:run": "yarn typeorm migration:run",
-    "migration:revert": "yarn typeorm migration:revert",
-    "schema:drop": "yarn typeorm schema:drop",
+    "migration:generate": "npm run typeorm migration:generate src/database/migrations/migration",
+    "migration:run": "npm run typeorm migration:run",
+    "migration:revert": "npm run typeorm migration:revert",
+    "schema:drop": "npm run typeorm schema:drop",
     "typeorm-extension": "ts-node -r tsconfig-paths/register node_modules/typeorm-extension/bin/cli.cjs -d src/database/configs/typeorm.config.ts",
-    "db:seed": "yarn schema:drop && yarn migration:run && yarn typeorm-extension seed:run"
+    "db:seed": "npm run schema:drop && npm run migration:run && npm run typeorm-extension seed:run"
   },
   "dependencies": {
     "@nestjs-modules/mailer": "^2.0.2",
@@ -44,7 +44,7 @@
     "class-validator": "^0.14.1",
     "date-fns": "^3.6.0",
     "multer": "^1.4.5-lts.1",
-    "mysql2": "^3.10.0",
+    "mysql2": "^3.11.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.0",

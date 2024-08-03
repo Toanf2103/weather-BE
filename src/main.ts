@@ -16,7 +16,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService)
 
   // Enable Cross-Origin Resource Sharing (CORS) for the application
-  app.enableCors({ origin: configService.get('FRONTEND_URL') })
+  app.enableCors({ origin: '*' })
 
   // Apply custom trim pipe globally to trim all string inputs
   app.useGlobalPipes(new TrimPipe())
