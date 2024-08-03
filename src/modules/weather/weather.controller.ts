@@ -3,6 +3,7 @@ import { WeatherService } from './weather.service'
 import { FindCitiesRequest, GetCurrentWeatherRequest, GetForeCastWeatherRequest } from './request'
 import { CityResponse, CurrentWeatherResponse } from './response'
 import { Request } from 'express'
+import { GetCurrentIpWeatherRequest } from './request/get-current-ip-weather.request'
 
 @Controller('weather')
 export class WeatherController {
@@ -20,6 +21,14 @@ export class WeatherController {
     @Query() getCurrentWeatherRequest: GetCurrentWeatherRequest,
   ): Promise<CurrentWeatherResponse> {
     return await this.weatherService.getCurrentWeather(getCurrentWeatherRequest)
+  }
+
+  @Get('/current-ip')
+  @HttpCode(HttpStatus.OK)
+  async getCurrentIpWeather(
+    @Query() getCurrentIpWeatherRequest: GetCurrentIpWeatherRequest,
+  ): Promise<CurrentWeatherResponse> {
+    return await this.weatherService.getCurrentIpWeather(getCurrentIpWeatherRequest)
   }
 
   @Get('/forecast')
