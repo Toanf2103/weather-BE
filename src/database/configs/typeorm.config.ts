@@ -3,7 +3,6 @@ import { DataSource } from 'typeorm'
 import { DataSourceOptions } from 'typeorm/data-source'
 import { SeederOptions } from 'typeorm-extension'
 
-import InitSeeder from '@/database/seeders/init.seeder'
 
 config()
 
@@ -16,7 +15,6 @@ export const dataSourceOptions: DataSourceOptions & SeederOptions = {
   database: process.env.DB_DATABASE,
   entities: ['src/**/*.entity.{ts,js}'],
   migrations: ['src/**/migrations/*.{ts,js}'],
-  seeds: [InitSeeder],
 }
 
 export default new DataSource(dataSourceOptions)

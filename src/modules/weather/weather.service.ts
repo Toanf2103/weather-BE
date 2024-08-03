@@ -1,17 +1,40 @@
-import { HttpException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
+import {
+  HttpException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  Res,
+} from '@nestjs/common'
 
 import { apiWeather } from '@/common/configs'
-import { FindCitiesRequest, GetCurrentWeatherRequest, GetForeCastWeatherRequest } from './request'
+import {
+  FindCitiesRequest,
+  GetCurrentWeatherRequest,
+  GetForeCastWeatherRequest,
+  RegisterNotificationsRequest,
+} from './request'
 import { CityResponse, CurrentWeatherResponse } from './response'
 import { plainToInstance } from 'class-transformer'
 import { addDays, format } from 'date-fns'
-import { Cron } from '@nestjs/schedule'
+import { Cron, CronExpression } from '@nestjs/schedule'
 import { EmailService } from '../email/email.service'
 import { GetCurrentIpWeatherRequest } from './request/get-current-ip-weather.request'
+import { JwtService } from '@nestjs/jwt'
+import { ConfigService } from '@nestjs/config'
+import { MailerService } from '@nestjs-modules/mailer'
+import { InjectRepository } from '@nestjs/typeorm'
+import { WeatherNotification } from '@/database/entities'
+import { Repository } from 'typeorm'
 
 @Injectable()
 export class WeatherService {
-  constructor(private readonly emailService: EmailService) {}
+  constructor(
+    private readonly emailService: EmailService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+    @InjectRepository(WeatherNotification)
+    private readonly weatherNotiRepo: Repository<WeatherNotification>,
+  ) {}
 
   public async findCities(findCityRequest: FindCitiesRequest): Promise<CityResponse[]> {
     const { q } = findCityRequest
@@ -58,8 +81,6 @@ export class WeatherService {
     getCurrentWeatherRequest: GetCurrentIpWeatherRequest,
   ): Promise<CurrentWeatherResponse> {
     const ip = getCurrentWeatherRequest.ip
-    console.log(ip)
-
     try {
       const { data: currentIp } = await apiWeather.get<any>('/ip.json', {
         params: {
@@ -68,21 +89,20 @@ export class WeatherService {
         },
       })
 
-      if(!currentIp.city){
+      if (!currentIp.city) {
         throw new NotFoundException()
       }
 
       const { data: currentWeather } = await apiWeather.get<any>('/current.json', {
         params: {
           key: process.env.WEATHER_API_KEY,
-          q:currentIp.city,
+          q: currentIp.city,
         },
       })
 
       return plainToInstance(CurrentWeatherResponse, currentWeather, {
         excludeExtraneousValues: true,
       })
-
     } catch (err) {
       if (err.response.data) {
         throw new HttpException(err?.response?.data?.error, err.response.status)
@@ -166,6 +186,50 @@ export class WeatherService {
 
   // @Cron('0 */1 * * * *')
   public async lockTimeSheet(): Promise<void> {
-    await this.emailService.sendMail()
+    // await this.emailService.sendMail()
+  }
+
+  public async registerNotifications(rq: RegisterNotificationsRequest) {
+    const { email, city } = rq
+    const tokenVerify = this.jwtService.sign(
+      {
+        email,
+        city,
+      },
+      {
+        secret: this.configService.get('SECRET_KEY'),
+      },
+    )
+    this.emailService.sendVerifyMail(email, tokenVerify)
+
+    return {
+      message: 'Please check your email!',
+    }
+  }
+
+  public async verify(token: string) {
+    const payloads = this.jwtService.verify(token, {
+      secret: this.configService.get('SECRET_KEY'),
+    })
+    const weatherRegistation = this.weatherNotiRepo.create({
+      email: payloads.email,
+      city: payloads.city,
+    })
+    return await this.weatherNotiRepo.save(weatherRegistation)
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_9AM)
+  public async sendMailDaily() {
+    const resgitations = await this.weatherNotiRepo.find()
+    resgitations.forEach(async resgitation => {
+      const { data: currentWeather } = await apiWeather.get<any>('/current.json', {
+        params: {
+          key: process.env.WEATHER_API_KEY,
+          q: resgitation.city,
+        },
+      })
+      this.emailService.sendMailDaily(resgitation.email, currentWeather)
+    })
+    return resgitations
   }
 }
