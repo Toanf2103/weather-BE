@@ -12,7 +12,7 @@ export class EmailService {
 
   public async sendVerifyMail(email: string, token: string) {
     try {
-      const url = `${this.configService.get('APP_URL')}/verify?token=${token}`
+      const url = `${this.configService.get('APP_URL')}/weather/verify?token=${token}`
       const info = await this.mailerService.sendMail({
         to: email,
         subject: 'Email verify',
